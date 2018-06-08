@@ -1,0 +1,358 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper, hmargin={2.8cm, 2.8cm}, vmargin={2.5cm, 2.5cm}]{geometry}
+\usepackage{eso-pic} % \AddToShipoutPicture
+\usepackage{graphicx} % \includegraphics
+\usepackage{listings}
+
+
+
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage[pdftex]{color,graphicx}
+% \usepackage{wrapfig}
+% \usepackage{caption}
+% \usepackage{subcaption}
+% \usepackage{float}
+% \usepackage{mdwlist}
+% \usepackage{pgfgantt}
+% \usepackage[showframe=false]{geometry}
+% \usepackage{changepage}
+% \usepackage[bookmarks]{hyperref}
+% \usepackage{listings}
+% \usepackage{dirtree}
+% \usepackage{todonotes}
+
+%% Change `ku-farve` to `nat-farve` to use SCIENCE's old colors or
+%% `natbio-farve` to use SCIENCE's new colors and logo.
+\def \ColourPDF {include/ku-farve}
+
+%% Change `ku-en` to `nat-en` to use the `Faculty of Science` header
+\def \TitlePDF   {include/ku-en}  % University of Copenhagen
+
+\title{
+  \vspace{3cm}
+  \Huge{AP Assignment 1 - SubScript Interpreter} \\
+  \Large{DIKU University of Copenhagen 2017}
+}
+
+\author{
+  \Large{Jan Sokol, Denis Trebula}
+  \\ \texttt{\{kgj360,jmp640\}@alumni.ku.dk} \\
+}
+
+\date{
+    \today
+}
+
+\begin{document}
+
+
+\AddToShipoutPicture*{\put(0,0){\includegraphics*[viewport=0 0 700 600]{\ColourPDF}}}
+\AddToShipoutPicture*{\put(0,602){\includegraphics*[viewport=0 600 700 1600]{\ColourPDF}}}
+
+\AddToShipoutPicture*{\put(0,0){\includegraphics*{\TitlePDF}}}
+
+\clearpage\maketitle
+\thispagestyle{empty}
+
+\newpage
+
+
+
+
+
+
+%% Write your dissertation here.
+
+\section{Subscript Interpreter} \\
+The goal of this assigment is about implementing an interpreter for conserative subset of Mozilla's JavaScript implementation, which
+we will call SubScript.
+
+The interpreter can be run in two options. Option a, using helper functions provided in assessement, by running \texttt{stack runhaskell Subs.hs AST.txt} in commandline, where AST.txt is an plain text file containing Abstract syntax tree of some SubScript code.
+Option b, by loading Tests.hs file into GHCI and running mainTxtTest. which also uses file intro-ast.txt.
+
+\subsection{Implementation}
+We can seperate our implementation into two main sections.
+
+\subsubsection{Initial types and Monad}
+SubM monad we had to implement is quite similar to Haskell's State monad [1] so we took some inspiration there (we also keep environments that we're passing for future evaluations)
+
+For construction of SubsM instance of type a we have to provide function of type:
+\begin{verbatim}
+Context -> Either Error (a, Env)
+\end{verbatim} 
+If we want to deconstruct the instance, type constuctor contains function runSubsM. 
+
+\subsubsection{Monad Laws}
+
+If something is called monad, it has to follow 3 rules [3]:
+\begin{itemize}
+\item Left identity,	
+\item Right identity,
+\item Associativity laws.
+\end{itemize}
+
+
+\paragraph{Left identity \texttt{(return a >>= f  === f a)}}
+This law states that \texttt{(return a) bind f == f a} or Create a monad with 'a' and bind it with 'f' is the same as calling 'f(a)'. We can prove this law in: [2]\\
+% \begin{verbatim}
+%   m >>= f  = SubsM (\(env, pEnv) -> case runSubsM m (env, pEnv) of
+%      Left e        -> Left e
+%      (Right (x,env')) -> runSubsM (f x) (env',pEnv))
+% \end{verbatim}
+
+
+\begin{verbatim}
+return a >>= f -- def. of return
+= SubsM (\(env, pEnv) -> Right (a, env)) >>= f -- def. of >>= 
+= SubsM (\(env, pEnv) -> runSubsM (f a) (env, pEnv)) -- def. of runSubsM
+= f a
+\end{verbatim}
+
+
+\paragraph{Right identity \texttt{(m >>= return === m)}}
+This law states that \texttt{m bind return == m} or Binding return on a monad returns the same monad. Here we have two cases:\\
+% $runsubsm$ $c = Left \textrm{ } e$\\
+% $=subsm \textrm{ }  x >>= return$\\
+% $=subsm  \textrm{ } (\backslash c -> Left \textrm{ }  e)$\\
+% $=subsm  \textrm{ } x$\\
+\begin{verbatim}
+runSubsM m c = Left e
+(SubsM x) >>= return -- def. of >>=
+= SubsM (\(env, pEnv) -> Left e) -- def. of SubsM x
+= (SubsM x) 
+\end{verbatim}
+
+
+And second case:\\
+% $runsubsm$ $c = Right \textrm{ }  (x, env)$\\
+% $=subsm  \textrm{ } x >>= return$\\
+% $=runsubsm  \textrm{ } (return \textrm{ }  x) (env, snd \textrm{ }  c)$\\
+% $=return \textrm{ }  x$\\
+% $=subsm  \textrm{ } x$\\
+\begin{verbatim}
+
+(SubsM x) >>= return -- def. of >>=
+runSubsM (return x) (env,pEnv) -- def. of return
+= return x
+= SubsM x
+\end{verbatim}
+
+
+
+\paragraph{Associativity law}
+This law states that \texttt{m bind f bind g == m bind (i -> f(i) bind g)} or Binding f to a monad and then binding g is the same as binding a function that produces a monad using f bidning g to the result to the same monad. [2]
+
+
+Proving this law formally is rather complex, so we provided an example in our tests. Function to test Associativity law which takes expression as argument, looks like:
+\begin{verbatim}
+
+testCase "Monad Associativity Law Test 1" $
+            (runSubsM (do asoc <- do { x <- return Undefined;
+                                      ex x
+                                  }
+                          mon asoc
+                    ) initialContext @?= runSubsM (do x <- return Undefined
+                                                      do { asoc <- ex x;
+                                                           mon asoc
+                                                         }
+                                         ) initialContext) 
+\end{verbatim}
+
+Where "Undefined" represents an expression.
+
+\paragraph{Implemented functions}
+
+In this paragraph we will show our implementation of primitive functions which take list of values and return an Either type.
+If expected types are not matches, functions will yield errors.
+
+\paragraph{Primitive functions}
+functions are functions that take list of values and return an \texttt{Either} type. If expected types are not matched, fuctions will yield errors. 
+\begin{itemize}
+\item \texttt{primitiveEq} is a strictly equal function, so the arguments has to be structurally equal. For example comparing int with string will return \texttt{False}
+\item \texttt{primitiveLt} makes comparison between 2 ints or 2 strings and evaluates as true if the one is less than the other.
+\item \texttt{primitiveAnd} makes addition between 2 ints, strings or combination of them and vice versa. If one of the arguments is string, function will return a String 
+\item \texttt{primitiveMul} makes multiplication between 2 integers. 
+\item \texttt{primitiveSub} represents mathematical function minus.
+\item \texttt{primitiveMod} uses modulo function on two arguments and return the result
+\item \texttt{mkArray} was given forehand in the assigment.
+\end{itemize}
+
+
+Example of primitive function:
+\begin{verbatim}
+
+primitiveMul :: Primitive
+primitiveMul [IntVal num, IntVal num' ] = return (IntVal  (num * num'))
+primitiveMul _ = Left " `*` arguments must be 2 integers"
+
+\end{verbatim}
+
+
+% PRIDAT DAKY BASIC KOD
+\paragraph{modifyEnv}
+This is a very simple one line function where we just update given enviroment.
+\paragraph{putVar}
+This function uses identificator and value as arguments and adds them together in a Map.
+\paragraph{getVar}
+This function is basically just a getter function for value, we use function lookup in a map for the name of the variable.
+\paragraph{getFunction}
+This function is also a getter function which looks up a given function name as an argument in our list of primitive functions.
+We use this function in evalExpr(Call) function so we can know which one of our primitive functions to call.
+
+
+
+Example of \texttt{getFunction} from our code:
+\begin{verbatim}
+
+getFunction :: FunName -> SubsM Primitive
+getFunction funName = SubsM (\(env, penv) -> case Map.lookup funName penv of
+                                Just p -> Right (p, env)
+                                Nothing -> Left ("unbound function" ++
+                                                "used but not defined"
+                                                ++ funName))
+\end{verbatim}
+
+
+\paragraph{evalExpr}
+This function is basically bread and butter of our interpreter. Its main purpose is to evaluate given expression and return a value based on chosen process. We have created evaluation of Number, String, Array, Undefined, TrueConst, FalseConst, Var, Call, Assign, Comma, Comprehension. 
+
+Example of evalExpr function:
+
+\begin{verbatim}
+evalExpr (Comma expr1 expr2) = evalExpr expr1  >> evalExpr expr2
+
+\end{verbatim}
+
+
+
+\paragraph{runExpr}
+runExpr evaluate expression e in the initial context, yielding either a runtime error or the value of the expression.
+\begin{verbatim}
+
+runExpr :: Expr -> Either Error Value
+runExpr expression = case runSubsM (evalExpr expression) initialContext of
+  						Left err -> Left err
+  						Right (valOfExpr, _) -> Right valOfExpr
+}
+\end{verbatim}
+
+
+% \paragraph{evalExpr}
+% is a function that takes some expression and returns \texttt{SubM Value}. Function evaluates expressions recursively until it gets to the AST's leaf. Between those expressions belong functions \texttt{ '+', '-', '\%', 'mul'}, functions to create array or comparsion operations ($'<'$ and $'==='$). 
+
+% \paragraph{primitive*}
+% functions are functions that take list of values and return an Either type. If expected types are not matched, fuctions will yield errors. 
+% \begin{itemize}
+% \item primitiveEq is a strictly equal function, so the arguments has to be structurally equal. (For example comparing int with string will return False)
+% \item primitiveLt compares 2 ints or 2 strings
+% \item primitiveAnd works for 2 ints or strings. If one of the arguments is string, function will return a String 
+% \item primitive
+% \end{itemize}
+
+
+
+\subsubsection{List Comperehention}
+
+We split array comprehention into 3 cases: 
+\begin{itemize}
+\item ACBody -- we only evaluate expression inside.
+\item ACFor -- takes 3 parameters: indentifier, expression and array compehention. For evaluating ACFor we use helper function. In evalACFor we consider 2 main cases -- if we are iterating over string, we change it into array of chars. If we iterate over array, we run evalACFor recursively over each item in array. Function includes code for flattening arrays. Other cases will evaluate as error. 
+\item ACIf -- takes two parameters. First one is expression and second another nested array comprehention. If the expression gets evaluated to tue, then Comprehention also evaluates. Otherwise function returns empty array.
+
+\end{itemize}
+Code for ACIf is shown below:
+\begin{verbatim}
+
+evalExpr (Compr (ACIf expr comp)) = do
+  trueOrFalse <- evalExpr expr
+  if trueOrFalse == TrueVal
+    then evalExpr (Compr comp)
+    else if trueOrFalse == FalseVal
+      then return (ArrayVal[])
+      else SubsM (const (Left "ACIf must be supplied with a boolean condition"))
+\end{verbatim} 
+
+
+\end{itemize}
+
+ We acknowledge that in order to return a succesfull value we need to save Ident value for ACFor and restore the old one after evaluating 
+(x is only local variable here.)
+\begin{verbatim}
+      Comma (Assign "x" (Number 1))
+            (Comma (Compr (ACFor "x"
+                                 (Array [Number 2,Number 3])
+                                 (ACBody (Var "x"))))
+                   (Var "x"))
+\end{verbatim} 
+
+
+\subsection{Testing - How to run code and reproduce test reults}
+	We find it important to keep tests in separate file. We keep all the tests in file Test.hs and HunitTests.hs. We have implemented over 16 automated tests and 21 Hunit test cases using tasty (testing) framework and Hunit. 
+  We created tests to check simple primitive functions but also more complicated ones like array comprehensions for ACFor, ACIf, ACbody. We also used main and nice functions from Subs.hs file to create our own test in Tests.hs which allows us to test file "intro-ast.txt" with all of our testing functions together.
+
+  We have also implemented 6 Hunit tests for Monad laws, 2 for each law, to provide evidence that our choice of Monad indeed satisfies the monad laws.
+
+  Example:
+
+  \begin{verbatim}
+
+  testCase "Monad Right Identity Law Test 1" $
+            (runSubsM (do right <- ex Undefined
+                          return right
+                          ) initialContext @?= runSubsM (do ex Undefined
+                                                        ) initialContext ),
+  \end{verbatim}
+
+\begin{enumerate}
+
+\item In order to reproduce our results from automated testing all you need is to load Tests.hs within GHCI and type mainTxtTest which uses mentioned "intro-ast.txt" from Main or you can type testAll to get output from every test case we implemented.\\
+
+  \item In order to reproduce our Hunit testing all you need is to type:
+  \begin{verbatim}
+  stack exec ghci -- -W UnitTests.hs
+  \end{verbatim}
+  Take in mind that in order to successfully compile the file you must have tasty framework and its plugin Hunit installed. To do so, you need to type:
+  \begin{verbatim}
+  stack install tasty
+  stack install tasty-hunit
+  \end{verbatim}
+  Then you simply write main and you will reproduce our results.\\
+\end{enumerate}
+
+Example of simple and more complicated tests:
+\begin{verbatim}
+
+correctLessTest :: Bool
+correctLessTest = (runExpr(Call "<" [Number 4, Number 8]) == Right TrueVal)	
+
+correctAssignTestInt :: Bool
+correctAssignTestInt = case runExpr (Comma (Assign "f" (Number 8))
+                        (Comma (Assign "d" (Number 4))
+                        (Var "f"))) of
+                          Right v -> v == IntVal 8
+                          Left _ -> False
+
+\end{verbatim} 
+
+
+\subsection{Assessment}\\
+We were able to develop a solid version of SubScript interpreter. We were able to finish all points of the assigment. We have implemented also checkers for error values in our functions. 
+\subsubsection{Support for our claims}\\
+To support our claims we have implemented 37 test cases(16 automated tests, 21 Hunit tests) covering Monad laws, AST trees given in the assesement directory and tests of runExpr function. 
+  We used tests for simple primitive functions but also for more complicated array comprehensions and monad laws. 
+
+\subsubsection{Summary of the Code Quality} \\
+Based on the tests, we were capable of solving the task and we believe that our solution is adequate and likely to be correct. Despite the fact we tested 37 test cases, we recognize that we couldnt test every possible scenario that could happen. Additionally we used OnlineTA test which our solution passed without failure, warning or hint and showed us that Interpreter works as expected.
+
+The quality of code and test cases could be improved, for example using Hunit to generate random expressions, or by using more functions from haskell standad library instead of implementing our own. Because of lack of time we were not able to improve code quality further.
+
+\subsection{Resources}
+\texttt{[1]} \href{https://en.wikibooks.org/wiki/Haskell/Understanding\_monads/State}
+\\
+\texttt{[2]} \href{https://hkupty.github.io/2016/Understanding-the-math-behind-fp-monads/}
+\\
+\texttt{[3]} \href{}{https://wiki.haskell.org/Monad\textunderscore{}laws}
+
+\end{document}
