@@ -4,10 +4,6 @@
 \usepackage{graphicx} % \includegraphics
 \usepackage{listings}
 
-
-
-
-\usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage[pdftex]{color,graphicx}
 \def \ColourPDF {include/ku-farve}
@@ -30,7 +26,6 @@
 }
 
 \begin{document}
-
 
 \AddToShipoutPicture*{\put(0,0){\includegraphics*[viewport=0 0 700 600]{\ColourPDF}}}
 \AddToShipoutPicture*{\put(0,602){\includegraphics*[viewport=0 600 700 1600]{\ColourPDF}}}
@@ -70,7 +65,6 @@ If something is called monad, it has to follow 3 rules [3]:
 \item Associativity laws.
 \end{itemize}
 
-
 \paragraph{Left identity \texttt{(return a >>= f  === f a)}}
 This law states that \texttt{(return a) bind f == f a} or Create a monad with 'a' and bind it with 'f' is the same as calling 'f(a)'. We can prove this law in: [2]\\
 return a >>= f -- def. of return
@@ -78,7 +72,6 @@ return a >>= f -- def. of return
 = SubsM (\(env, pEnv) -> runSubsM (f a) (env, pEnv)) -- def. of runSubsM
 = f a
 \end{verbatim}
-
 
 \paragraph{Right identity \texttt{(m >>= return === m)}}
 This law states that \texttt{m bind return == m} or Binding return on a monad returns the same monad. Here we have two cases:\\
@@ -89,7 +82,6 @@ runSubsM m c = Left e
 = (SubsM x) 
 \end{verbatim}
 
-
 And second case:\\
 \begin{verbatim}
 
@@ -98,8 +90,6 @@ runSubsM (return x) (env,pEnv) -- def. of return
 = return x
 = SubsM x
 \end{verbatim}
-
-
 
 \paragraph{Associativity law}
 This law states that \texttt{m bind f bind g == m bind (i -> f(i) bind g)} or Binding f to a monad and then binding g is the same as binding a function that produces a monad using f bidning g to the result to the same monad. [2]
@@ -139,7 +129,6 @@ functions are functions that take list of values and return an \texttt{Either} t
 \item \texttt{mkArray} was given forehand in the assigment.
 \end{itemize}
 
-
 Example of primitive function:
 \begin{verbatim}
 
@@ -149,8 +138,6 @@ primitiveMul _ = Left " `*` arguments must be 2 integers"
 
 \end{verbatim}
 
-
-% PRIDAT DAKY BASIC KOD
 \paragraph{modifyEnv}
 This is a very simple one line function where we just update given enviroment.
 \paragraph{putVar}
@@ -160,8 +147,6 @@ This function is basically just a getter function for value, we use function loo
 \paragraph{getFunction}
 This function is also a getter function which looks up a given function name as an argument in our list of primitive functions.
 We use this function in evalExpr(Call) function so we can know which one of our primitive functions to call.
-
-
 
 Example of \texttt{getFunction} from our code:
 \begin{verbatim}
@@ -174,7 +159,6 @@ getFunction funName = SubsM (\(env, penv) -> case Map.lookup funName penv of
                                                 ++ funName))
 \end{verbatim}
 
-
 \paragraph{evalExpr}
 This function is basically bread and butter of our interpreter. Its main purpose is to evaluate given expression and return a value based on chosen process. We have created evaluation of Number, String, Array, Undefined, TrueConst, FalseConst, Var, Call, Assign, Comma, Comprehension. 
 
@@ -184,8 +168,6 @@ Example of evalExpr function:
 evalExpr (Comma expr1 expr2) = evalExpr expr1  >> evalExpr expr2
 
 \end{verbatim}
-
-
 
 \paragraph{runExpr}
 runExpr evaluate expression e in the initial context, yielding either a runtime error or the value of the expression.
@@ -232,13 +214,11 @@ evalExpr (Compr (ACIf expr comp)) = do
                    (Var "x"))
 \end{verbatim} 
 
-
 \subsection{Testing - How to run code and reproduce test reults}
 	We find it important to keep tests in separate file. We keep all the tests in file Test.hs and HunitTests.hs. We have implemented over 16 automated tests and 21 Hunit test cases using tasty (testing) framework and Hunit. 
   We created tests to check simple primitive functions but also more complicated ones like array comprehensions for ACFor, ACIf, ACbody. We also used main and nice functions from Subs.hs file to create our own test in Tests.hs which allows us to test file "intro-ast.txt" with all of our testing functions together.
 
   We have also implemented 6 Hunit tests for Monad laws, 2 for each law, to provide evidence that our choice of Monad indeed satisfies the monad laws.
-
   Example:
 
   \begin{verbatim}
@@ -280,8 +260,6 @@ correctAssignTestInt = case runExpr (Comma (Assign "f" (Number 8))
                           Left _ -> False
 
 \end{verbatim} 
-
-
 \subsection{Assessment}\\
 We were able to develop a solid version of SubScript interpreter. We were able to finish all points of the assigment. We have implemented also checkers for error values in our functions. 
 \subsubsection{Support for our claims}\\
