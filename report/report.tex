@@ -10,24 +10,8 @@
 \usepackage{amsfonts}
 \usepackage{amsmath}
 \usepackage[pdftex]{color,graphicx}
-% \usepackage{wrapfig}
-% \usepackage{caption}
-% \usepackage{subcaption}
-% \usepackage{float}
-% \usepackage{mdwlist}
-% \usepackage{pgfgantt}
-% \usepackage[showframe=false]{geometry}
-% \usepackage{changepage}
-% \usepackage[bookmarks]{hyperref}
-% \usepackage{listings}
-% \usepackage{dirtree}
-% \usepackage{todonotes}
-
-%% Change `ku-farve` to `nat-farve` to use SCIENCE's old colors or
-%% `natbio-farve` to use SCIENCE's new colors and logo.
 \def \ColourPDF {include/ku-farve}
 
-%% Change `ku-en` to `nat-en` to use the `Faculty of Science` header
 \def \TitlePDF   {include/ku-en}  % University of Copenhagen
 
 \title{
@@ -57,13 +41,6 @@
 \thispagestyle{empty}
 
 \newpage
-
-
-
-
-
-
-%% Write your dissertation here.
 
 \section{Subscript Interpreter} \\
 The goal of this assigment is about implementing an interpreter for conserative subset of Mozilla's JavaScript implementation, which
@@ -96,14 +73,6 @@ If something is called monad, it has to follow 3 rules [3]:
 
 \paragraph{Left identity \texttt{(return a >>= f  === f a)}}
 This law states that \texttt{(return a) bind f == f a} or Create a monad with 'a' and bind it with 'f' is the same as calling 'f(a)'. We can prove this law in: [2]\\
-% \begin{verbatim}
-%   m >>= f  = SubsM (\(env, pEnv) -> case runSubsM m (env, pEnv) of
-%      Left e        -> Left e
-%      (Right (x,env')) -> runSubsM (f x) (env',pEnv))
-% \end{verbatim}
-
-
-\begin{verbatim}
 return a >>= f -- def. of return
 = SubsM (\(env, pEnv) -> Right (a, env)) >>= f -- def. of >>= 
 = SubsM (\(env, pEnv) -> runSubsM (f a) (env, pEnv)) -- def. of runSubsM
@@ -113,10 +82,6 @@ return a >>= f -- def. of return
 
 \paragraph{Right identity \texttt{(m >>= return === m)}}
 This law states that \texttt{m bind return == m} or Binding return on a monad returns the same monad. Here we have two cases:\\
-% $runsubsm$ $c = Left \textrm{ } e$\\
-% $=subsm \textrm{ }  x >>= return$\\
-% $=subsm  \textrm{ } (\backslash c -> Left \textrm{ }  e)$\\
-% $=subsm  \textrm{ } x$\\
 \begin{verbatim}
 runSubsM m c = Left e
 (SubsM x) >>= return -- def. of >>=
@@ -126,11 +91,6 @@ runSubsM m c = Left e
 
 
 And second case:\\
-% $runsubsm$ $c = Right \textrm{ }  (x, env)$\\
-% $=subsm  \textrm{ } x >>= return$\\
-% $=runsubsm  \textrm{ } (return \textrm{ }  x) (env, snd \textrm{ }  c)$\\
-% $=return \textrm{ }  x$\\
-% $=subsm  \textrm{ } x$\\
 \begin{verbatim}
 
 (SubsM x) >>= return -- def. of >>=
@@ -237,21 +197,6 @@ runExpr expression = case runSubsM (evalExpr expression) initialContext of
   						Right (valOfExpr, _) -> Right valOfExpr
 }
 \end{verbatim}
-
-
-% \paragraph{evalExpr}
-% is a function that takes some expression and returns \texttt{SubM Value}. Function evaluates expressions recursively until it gets to the AST's leaf. Between those expressions belong functions \texttt{ '+', '-', '\%', 'mul'}, functions to create array or comparsion operations ($'<'$ and $'==='$). 
-
-% \paragraph{primitive*}
-% functions are functions that take list of values and return an Either type. If expected types are not matched, fuctions will yield errors. 
-% \begin{itemize}
-% \item primitiveEq is a strictly equal function, so the arguments has to be structurally equal. (For example comparing int with string will return False)
-% \item primitiveLt compares 2 ints or 2 strings
-% \item primitiveAnd works for 2 ints or strings. If one of the arguments is string, function will return a String 
-% \item primitive
-% \end{itemize}
-
-
 
 \subsubsection{List Comperehention}
 
