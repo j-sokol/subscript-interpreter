@@ -1,0 +1,10 @@
+Comma (Assign "xs"
+                    (Array [Number 1,Number 2,Number 3,Number 4,
+                            Number 5,Number 6,Number 7,Number 8,Number 9]))
+            (Compr (ACFor "x"
+                          (Var "xs")
+                          (ACIf (Call "==="
+                                      [Call "%" [Var "x",Number 2],
+                                       Number 1])
+                                (ACBody (Var "x")))))
+

@@ -1,0 +1,4 @@
+Comma (Assign "x" (Number 42))
+ (Comma (Assign "y" (Compr (ACFor "x" (String "abc")
+                             (ACBody (Var "x")))))
+   (Array [Var "x", Var "y"]))

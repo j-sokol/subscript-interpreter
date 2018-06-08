@@ -1,0 +1,5 @@
+Comma (Assign "xs"
+                    (Array [Number 1,Number 2,Number 3]))
+            (Compr (ACFor "x"
+                          (Var "xs")
+                          (ACFor "y" (Var "xs") (ACBody (Number 0)))))
